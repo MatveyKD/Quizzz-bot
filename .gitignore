@@ -40,11 +40,13 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
+.idea/
 .coverage
 .coverage.*
 .cache
 nosetests.xml
 coverage.xml
+1vs1200.txt
 *.cover
 *.py,cover
 .hypothesis/
