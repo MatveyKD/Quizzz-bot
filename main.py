@@ -6,6 +6,8 @@ from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from dotenv import load_dotenv
 
+import redis
+
 
 def collect_questions(questions_file_path):
     with open(questions_file_path, 'r', encoding='KOI8-R') as file:
@@ -36,12 +38,25 @@ def start(update: Update, context: CallbackContext):
 
 def answer(update: Update, context: CallbackContext):
     if update.message.text == "Новый вопрос":
-        question_rnd_index = random.randint(0, len(list(QUESTIONS_DATA))-1)
-        question = list(QUESTIONS_DATA.keys())[question_rnd_index]
+        question_rnd_index = random.randint(0, len(list(context.bot_data["questions_data"]))-1)
+        question = list(context.bot_data["questions_data"].keys())[question_rnd_index]
         update.message.reply_text(question)
+        context.bot_data["redis"].set(str(update.message.chat_id), str(question))
+        print(context.bot_data["redis"].get(str(update.message.chat_id)).decode())
 
 
 def main():
+    load_dotenv()
+
+    r = redis.Redis(
+        host=os.getenv("REDIS_HOST"),
+        port=os.getenv("REDIS_PORT"),
+        password=os.getenv("REDIS_PASSWORD"),
+        username=os.getenv("REDIS_USERNAME")
+    )
+
+    questions_data = collect_questions(os.getenv("QUESTIONS_PATH"))
+
     updater = Updater(os.getenv("TOKEN"))
 
     dispatcher = updater.dispatcher
@@ -49,6 +64,8 @@ def main():
     dispatcher.add_handler(CommandHandler("start", start))
 
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, answer))
+    dispatcher.bot_data["redis"] = r
+    dispatcher.bot_data["questions_data"] = questions_data
 
     updater.start_polling()
 
@@ -56,6 +73,4 @@ def main():
 
 
 if __name__ == '__main__':
-    load_dotenv()
-    QUESTIONS_DATA = collect_questions(os.getenv("QUESTIONS_PATH"))
     main()
