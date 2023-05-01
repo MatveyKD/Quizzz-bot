@@ -20,7 +20,7 @@ def collect_questions(questions_file_path):
         if sentence.startswith('Вопрос'):
             question = ' '.join(sentence.split(':')[1:])
         elif sentence.startswith('Ответ'):
-            answer = str(' '.join(sentence.split(':')[1:]))
+            answer = str(' '.join(sentence.split(':')[1:])).split("(")[0].split(".")[0]
             questions_data[question] = answer
     return questions_data
 
@@ -42,7 +42,11 @@ def answer(update: Update, context: CallbackContext):
         question = list(context.bot_data["questions_data"].keys())[question_rnd_index]
         update.message.reply_text(question)
         context.bot_data["redis"].set(str(update.message.chat_id), str(question))
-        print(context.bot_data["redis"].get(str(update.message.chat_id)).decode())
+    else:
+        if context.bot_data["questions_data"][context.bot_data["redis"].get(str(update.message.chat_id)).decode()] in update.message.text:
+            update.message.reply_text("Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос».")
+        else:
+            update.message.reply_text("Неправильно… Попробуешь ещё раз?")
 
 
 def main():
