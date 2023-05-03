@@ -80,7 +80,7 @@ def main():
 
     questions_data = collect_questions(os.getenv("QUESTIONS_PATH"))
 
-    updater = Updater(os.getenv("TOKEN"))
+    updater = Updater(os.getenv("TG_BOT_TOKEN"))
 
     dispatcher = updater.dispatcher
 
