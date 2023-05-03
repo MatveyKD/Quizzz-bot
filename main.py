@@ -2,8 +2,8 @@ import os
 
 import telegram
 import random
-from telegram import Update, ForceReply
-from telegram.ext import Updater, CommandHandler, MessageHandler, RegexHandler, Filters, filters, CallbackContext, ConversationHandler
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
 from dotenv import load_dotenv
 
 import redis
@@ -60,6 +60,7 @@ def handle_solution_attempt(update: Update, context: CallbackContext):
 def handle_surrender_request(update: Update, context: CallbackContext):
     update.message.reply_text('Правильный ответ: {}. Для следущего вопроса нажмите "Новый вопрос"'.format(context.bot_data["questions_data"][context.bot_data["redis"].get(str(update.message.chat_id)).decode()]))
     return NEW_QUESTION
+
 
 def cancel(update):
     update.message.reply_text('Вы отменили действие.')
