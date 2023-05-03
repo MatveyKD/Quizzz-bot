@@ -3,10 +3,13 @@ import os
 import telegram
 import random
 from telegram import Update, ForceReply
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, RegexHandler, Filters, filters, CallbackContext, ConversationHandler
 from dotenv import load_dotenv
 
 import redis
+
+
+NEW_QUESTION, USER_ANSWER = range(2)
 
 
 def collect_questions(questions_file_path):
@@ -31,22 +34,33 @@ def start(update: Update, context: CallbackContext):
     reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
     user = update.effective_user
     update.message.reply_markdown_v2(
-        fr'Hi {user.mention_markdown_v2()}\!',
+        fr'Здравствуйте, {user.mention_markdown_v2()}\! Для нового вопроса нажмите кнопку "Новый Вопрос"\.',
         reply_markup=reply_markup,
     )
+    return NEW_QUESTION
 
 
-def answer(update: Update, context: CallbackContext):
-    if update.message.text == "Новый вопрос":
-        question_rnd_index = random.randint(0, len(list(context.bot_data["questions_data"]))-1)
-        question = list(context.bot_data["questions_data"].keys())[question_rnd_index]
-        update.message.reply_text(question)
-        context.bot_data["redis"].set(str(update.message.chat_id), str(question))
+def handle_new_question_request(update: Update, context: CallbackContext):
+    question_rnd_index = random.randint(0, len(list(context.bot_data["questions_data"])) - 1)
+    question = list(context.bot_data["questions_data"].keys())[question_rnd_index]
+    update.message.reply_text(question)
+    context.bot_data["redis"].set(str(update.message.chat_id), str(question))
+    return USER_ANSWER
+
+
+def handle_solution_attempt(update: Update, context: CallbackContext):
+    if context.bot_data["questions_data"][context.bot_data["redis"].get(str(update.message.chat_id)).decode()] in update.message.text:
+        update.message.reply_text("Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос».")
+        return NEW_QUESTION
     else:
-        if context.bot_data["questions_data"][context.bot_data["redis"].get(str(update.message.chat_id)).decode()] in update.message.text:
-            update.message.reply_text("Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос».")
-        else:
-            update.message.reply_text("Неправильно… Попробуешь ещё раз?")
+        update.message.reply_text("Неправильно… Попробуешь ещё раз?")
+        return USER_ANSWER
+
+
+def cancel(update):
+    update.message.reply_text('Вы отменили действие.')
+
+    return ConversationHandler.END
 
 
 def main():
@@ -65,9 +79,20 @@ def main():
 
     dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(CommandHandler("start", start))
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
 
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, answer))
+        states={
+            NEW_QUESTION: [MessageHandler(Filters.regex('^Новый вопрос$'), handle_new_question_request)],
+
+            USER_ANSWER: [MessageHandler(Filters.text, handle_solution_attempt)]
+        },
+
+        fallbacks=[CommandHandler('cancel', cancel)]
+    )
+
+    dispatcher.add_handler(conv_handler)
+
     dispatcher.bot_data["redis"] = r
     dispatcher.bot_data["questions_data"] = questions_data
 
