@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import redis
 
 
-NEW_QUESTION, USER_ANSWER = range(2)
+NEW_QUESTION, USER_ANSWER, USER_SURRENDER = range(3)
 
 
 def collect_questions(questions_file_path):
@@ -57,6 +57,10 @@ def handle_solution_attempt(update: Update, context: CallbackContext):
         return USER_ANSWER
 
 
+def handle_surrender_request(update: Update, context: CallbackContext):
+    update.message.reply_text('Правильный ответ: {}. Для следущего вопроса нажмите "Новый вопрос"'.format(context.bot_data["questions_data"][context.bot_data["redis"].get(str(update.message.chat_id)).decode()]))
+    return NEW_QUESTION
+
 def cancel(update):
     update.message.reply_text('Вы отменили действие.')
 
@@ -85,7 +89,10 @@ def main():
         states={
             NEW_QUESTION: [MessageHandler(Filters.regex('^Новый вопрос$'), handle_new_question_request)],
 
-            USER_ANSWER: [MessageHandler(Filters.text, handle_solution_attempt)]
+            USER_ANSWER: [
+                MessageHandler(Filters.regex('^Сдаться$'), handle_surrender_request),
+                MessageHandler(Filters.text, handle_solution_attempt)
+            ]
         },
 
         fallbacks=[CommandHandler('cancel', cancel)]
