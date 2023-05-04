@@ -6,6 +6,8 @@ import vk_api as vk
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
+from collect_questions_data import collect_questions
+
 import redis
 
 
