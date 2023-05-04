@@ -4,44 +4,11 @@ from dotenv import load_dotenv
 
 import vk_api as vk
 from vk_api.longpoll import VkLongPoll, VkEventType
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
+from vk_api.keyboard import VkKeyboard
 
 from collect_questions_data import collect_questions
 
 import redis
-
-
-def collect_questions(questions_file_path):
-    with open(questions_file_path, 'r', encoding='KOI8-R') as file:
-        file_content = file.read()
-    splited_file = file_content.split('\n\n')[3:]
-    questions_data = dict()
-    question = ""
-    for part in splited_file:
-        sentence = (part.replace('\n', '', 1)).replace('\n', ' ')
-        if sentence.startswith('Вопрос'):
-            question = ' '.join(sentence.split(':')[1:])
-        elif sentence.startswith('Ответ'):
-            answer = str(' '.join(sentence.split(':')[1:])).split("(")[0].split(".")[0]
-            questions_data[question] = answer
-    return questions_data
-
-
-def echo(event, vk_api):
-    keyboard = VkKeyboard(one_time=True)
-
-    keyboard.add_button('Новый вопрос')
-    keyboard.add_button('Сдаться')
-
-    keyboard.add_line()
-    keyboard.add_button('Мой счёт')
-
-    vk_api.messages.send(
-        user_id=event.user_id,
-        message=event.text,
-        keyboard=keyboard.get_keyboard(),
-        random_id=random.randint(1, 1000)
-    )
 
 
 def main():
